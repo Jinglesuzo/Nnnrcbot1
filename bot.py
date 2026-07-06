@@ -9,86 +9,36 @@ import time
 import csv
 import os
 import sys
-import random
-import string
 
 class NRCBot:
-    def __init__(self):
+    def __init__(self, bot_id=1):
+        self.bot_id = bot_id
         self.step = 0
-        self.logins = []
+        self.logged_in_accounts = []
         self.load_logins()
-        self.setup_driver()
 
-    def setup_driver(self):
         options = Options()
-        
-        # === TRACKING BLOCKED (JavaScript ENABLED) ===
-        
-        # 1. Hide automation flags
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_experimental_option("excludeSwitches", ["enable-automation"])
-        options.add_experimental_option("useAutomationExtension", False)
-        
-        # 2. Block cookies and tracking
-        options.add_argument("--block-third-party-cookies")
-        options.add_experimental_option("prefs", {
-            "profile.default_content_setting_values.cookies": 2,  # Block all cookies
-            "profile.default_content_setting_values.images": 1,   # Allow images
-            "profile.default_content_setting_values.javascript": 1, # ✅ JavaScript ENABLED
-            "profile.default_content_setting_values.plugins": 1,   # Allow plugins
-            "profile.default_content_setting_values.popups": 2,    # Block popups
-            "profile.default_content_setting_values.geolocation": 2, # Block geolocation
-            "profile.default_content_setting_values.notifications": 2, # Block notifications
-        })
-        
-        # 3. Disable tracking features (but keep JavaScript)
-        options.add_argument("--disable-background-networking")
-        options.add_argument("--disable-background-timer-throttling")
-        options.add_argument("--disable-client-side-phishing-detection")
-        options.add_argument("--disable-component-update")
-        options.add_argument("--disable-default-apps")
-        options.add_argument("--disable-domain-reliability")
-        options.add_argument("--disable-features=TranslateUI")
-        options.add_argument("--disable-hang-monitor")
-        options.add_argument("--disable-ipc-flooding-protection")
-        options.add_argument("--disable-popup-blocking")
-        options.add_argument("--disable-prompt-on-repost")
-        options.add_argument("--disable-renderer-backgrounding")
-        options.add_argument("--disable-sync")
-        options.add_argument("--disable-web-security")
-        options.add_argument("--disable-webrtc")
-        
-        # 4. Use realistic user-agent (without "Headless")
-        options.add_argument("--user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36")
-        
-        # 5. Additional privacy settings
-        options.add_argument("--disable-blink-features=AutomationControlled")
-        options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("--no-sandbox")
-        options.add_argument("--window-size=1920,1080")
-        options.add_argument("--disable-gpu")
-        options.add_argument("--remote-debugging-port=9222")
-        
-        # 6. Headless mode (remove if you want to see the browser)
         options.add_argument("--headless=new")
-        
-        print("🔄 Starting Chrome with tracking blocked...")
+        options.add_argument("--no-sandbox")
+        options.add_argument("--disable-dev-shm-usage")
+        options.add_argument("--disable-gpu")
+        options.add_argument("--window-size=1920,1080")
+
+        print(f"🤖 Bot {self.bot_id} Starting Chrome...")
         try:
             service = Service('/usr/bin/chromedriver')
             self.driver = webdriver.Chrome(service=service, options=options)
+            print(f"✅ Bot {self.bot_id} Chrome started!")
         except:
             from webdriver_manager.chrome import ChromeDriverManager
             service = Service(ChromeDriverManager().install())
             self.driver = webdriver.Chrome(service=service, options=options)
-        
-        # Remove webdriver property (hide automation)
-        self.driver.execute_script("Object.defineProperty(navigator, 'webdriver', {get: () => undefined})")
-        print("✅ Chrome started with tracking blocked!")
+            print(f"✅ Bot {self.bot_id} Chrome started!")
 
     def screenshot(self, name):
         self.step += 1
         try:
-            filename = f"bot_{self.step:03d}_{name}.png"
+            filename = f"bot{self.bot_id}_{self.step:03d}_{name}.png"
             self.driver.save_screenshot(filename)
             print(f"   📸 {filename}")
         except:
@@ -106,104 +56,292 @@ class NRCBot:
                             'phone': row[0].strip(),
                             'password': row[1].strip()
                         })
-            print(f"📋 Loaded {len(self.logins)} login(s)")
+            print(f"📋 Bot {self.bot_id} Loaded {len(self.logins)} login(s)")
         except Exception as e:
-            print(f"❌ Error loading logins.csv: {e}")
+            print(f"❌ Bot {self.bot_id} Error loading logins.csv: {e}")
             self.logins = [{'phone': '08057536473', 'password': 'people56'}]
-
-    def generate_password(self):
-        """Generate a human-like password (letters + numbers)"""
-        words = ['apple', 'banana', 'cherry', 'dragon', 'eagle', 'falcon', 
-                 'garden', 'honey', 'island', 'jungle', 'knight', 'lion',
-                 'magic', 'noble', 'ocean', 'piano', 'queen', 'river',
-                 'star', 'tiger', 'uncle', 'victor', 'water', 'zebra']
-        word = random.choice(words)
-        number = random.randint(10, 999)
-        if random.random() > 0.5:
-            word = word.capitalize()
-        return f"{word}{number}"
 
     def clear_field(self, element):
         try:
             element.click()
             time.sleep(0.1)
-            element.clear()
+            element.send_keys(Keys.CONTROL + "a")
+            time.sleep(0.1)
+            element.send_keys(Keys.DELETE)
+            time.sleep(0.1)
+            self.driver.execute_script("arguments[0].value = '';", element)
             time.sleep(0.1)
             return True
-        except:
+        except Exception as e:
+            print(f"   ⚠️ Clear error: {e}")
             return False
 
     def type_text(self, element, text):
         self.clear_field(element)
-        # Type like a human (with small random delays)
         for char in text:
             element.send_keys(char)
-            time.sleep(random.uniform(0.05, 0.15))
-        time.sleep(0.1)
+            time.sleep(0.05)
+        entered = element.get_attribute('value')
+        print(f"   📝 Typed: {entered} (length: {len(entered)})")
+        time.sleep(0.2)
 
     def click_element(self, element):
         self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", element)
-        time.sleep(random.uniform(0.3, 0.6))
+        time.sleep(0.3)
         self.driver.execute_script("arguments[0].click();", element)
 
-    def find_login_button(self):
+    def scroll_down(self, amount=250):
         try:
-            btn = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Log in now')]")
+            self.driver.execute_script(f"window.scrollBy(0, {amount});")
+            time.sleep(0.3)
+            return True
+        except:
+            return False
+
+    def scroll_up(self, amount=150):
+        try:
+            self.driver.execute_script(f"window.scrollBy(0, -{amount});")
+            time.sleep(0.3)
+            return True
+        except:
+            return False
+
+    def show_password(self):
+        try:
+            eye_selectors = [
+                "//*[contains(@class, 'eye')]",
+                "//*[contains(@class, 'show-password')]",
+                "//button[@type='button']",
+                "//*[contains(@class, 'fa-eye')]"
+            ]
+            for selector in eye_selectors:
+                try:
+                    eye_btn = self.driver.find_element(By.XPATH, selector)
+                    if eye_btn.is_displayed() and eye_btn.is_enabled():
+                        self.click_element(eye_btn)
+                        print("   👁️ Clicked show password")
+                        time.sleep(0.5)
+                        self.screenshot("password_shown")
+                        return True
+                except:
+                    pass
+            return False
+        except:
+            return False
+
+    def find_login_button(self):
+        print("   🔍 Looking for login button...")
+        try:
+            btn = self.driver.find_element(By.XPATH, "//button[text()='Log in now']")
+            print("   ✅ Found 'Log in now'")
             return btn
         except:
-            try:
-                btn = self.driver.find_element(By.XPATH, "//button[@type='submit']")
-                return btn
-            except:
-                return None
+            pass
+        try:
+            btn = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Log in now')]")
+            print("   ✅ Found 'Log in now' (contains)")
+            return btn
+        except:
+            pass
+        try:
+            btn = self.driver.find_element(By.XPATH, "//button[@type='submit']")
+            print("   ✅ Found submit button")
+            return btn
+        except:
+            pass
+        try:
+            btn = self.driver.find_element(By.CSS_SELECTOR, "button[class*='green'], button[class*='login']")
+            print("   ✅ Found button by class")
+            return btn
+        except:
+            pass
+        try:
+            buttons = self.driver.find_elements(By.TAG_NAME, "button")
+            for btn in buttons:
+                if btn.is_displayed():
+                    text = btn.text.lower()
+                    if 'log' in text or 'in' in text or 'submit' in text:
+                        print(f"   ✅ Found button: '{btn.text}'")
+                        return btn
+        except:
+            pass
+        print("   ❌ No login button found")
+        return None
+
+    # ============================================
+    # POPUP REMOVAL
+    # ============================================
 
     def remove_important_notice(self):
         try:
-            news_btn = self.driver.find_element(By.XPATH, "//*[contains(text(), 'NEWS')]")
-            if news_btn.is_displayed():
-                self.click_element(news_btn)
-                time.sleep(1)
+            notice = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Important Notice')]")
+            if notice.is_displayed():
+                print("   📋 Found Important Notice")
+                self.screenshot("important_notice_found")
+                
                 try:
-                    close_btn = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Got it')] | //*[text()='×']")
-                    if close_btn.is_displayed():
-                        self.click_element(close_btn)
+                    news_btn = self.driver.find_element(By.XPATH, "//*[contains(text(), 'NEWS')] | //button[contains(text(), 'NEWS')]")
+                    if news_btn.is_displayed() and news_btn.is_enabled():
+                        self.click_element(news_btn)
+                        print("   📰 Clicked NEWS button")
+                        time.sleep(2)
+                        self.screenshot("after_news_click")
+                        
+                        try:
+                            close_btn = self.driver.find_element(By.XPATH, "//button[contains(text(), 'Got it')] | //button[contains(text(), 'OK')] | //*[contains(@class, 'modal-close')] | //*[text()='×']")
+                            if close_btn.is_displayed():
+                                self.click_element(close_btn)
+                                print("   🚫 Closed Welcome popup")
+                                time.sleep(1)
+                        except:
+                            pass
+                        
+                        try:
+                            close_btns = self.driver.find_elements(By.XPATH, "//*[contains(@class, 'close')] | //*[text()='×']")
+                            for btn in close_btns:
+                                if btn.is_displayed() and btn.is_enabled():
+                                    self.click_element(btn)
+                                    time.sleep(0.3)
+                        except:
+                            pass
+                        
+                        self.screenshot("popups_removed")
+                        return True
                 except:
-                    pass
-                return True
+                    print("   ⚠️ NEWS button not found")
+                    return False
         except:
-            pass
+            print("   ℹ️ No Important Notice found")
+            return True
         return True
 
-    def do_tasks(self):
-        print("   📋 Doing tasks...")
-        
+    # ============================================
+    # TASKS - WITH SCROLLING
+    # ============================================
+
+    def click_task_tab(self):
         try:
-            task_tab = self.driver.find_element(By.XPATH, "//*[contains(text(), 'Task')]")
-            self.click_element(task_tab)
-            time.sleep(1)
+            selectors = [
+                "//*[contains(text(), 'Task')]",
+                "//button[contains(text(), 'Task')]",
+                "//*[contains(@class, 'task')]",
+                "//*[contains(@class, 'tab-task')]"
+            ]
+            for selector in selectors:
+                try:
+                    elements = self.driver.find_elements(By.XPATH, selector)
+                    for element in elements:
+                        if element.is_displayed() and element.is_enabled():
+                            self.click_element(element)
+                            print("   📋 Clicked Task tab")
+                            time.sleep(2)
+                            self.screenshot("task_tab_clicked")
+                            return True
+                except:
+                    continue
+            return False
         except:
-            pass
+            return False
+
+    def find_all_read_buttons(self):
+        all_buttons = []
         
-        total = 0
-        for i in range(6):
+        selectors = [
+            "//button[contains(text(), 'read')]",
+            "//*[contains(text(), 'read')]",
+            "//button[contains(text(), 'Read')]",
+            "//button[contains(@class, 'read')]"
+        ]
+        
+        for scroll_attempt in range(5):
+            for selector in selectors:
+                try:
+                    buttons = self.driver.find_elements(By.XPATH, selector)
+                    for btn in buttons:
+                        if btn.is_displayed() and btn.is_enabled():
+                            if btn not in all_buttons:
+                                all_buttons.append(btn)
+                except:
+                    pass
+            
+            self.scroll_down(300)
+            time.sleep(0.5)
+        
+        self.scroll_up(500)
+        time.sleep(0.5)
+        
+        unique_buttons = []
+        for btn in all_buttons:
+            if btn not in unique_buttons:
+                unique_buttons.append(btn)
+        
+        return unique_buttons
+
+    def do_tasks(self):
+        print("   📋 Starting tasks...")
+        
+        self.click_task_tab()
+        time.sleep(2)
+        self.screenshot("tasks_page")
+        
+        total_tasks = 0
+        max_tasks = 6
+        
+        while total_tasks < max_tasks:
             try:
-                read_btn = self.driver.find_element(By.XPATH, "//button[contains(text(), 'read')]")
-                if read_btn.is_displayed() and read_btn.is_enabled():
-                    self.click_element(read_btn)
-                    total += 1
-                    print(f"   📖 Task {total} started")
-                    time.sleep(20)
-                    print(f"   ✅ Task {total} done")
-            except:
-                break
+                read_btns = self.find_all_read_buttons()
+                visible_btns = [btn for btn in read_btns if btn.is_displayed() and btn.is_enabled()]
+                
+                if not visible_btns:
+                    print(f"   ℹ️ No more tasks found (completed {total_tasks})")
+                    self.screenshot("no_more_tasks")
+                    break
+                
+                btn = visible_btns[0]
+                self.driver.execute_script("arguments[0].scrollIntoView({block: 'center'});", btn)
+                time.sleep(0.5)
+                
+                self.click_element(btn)
+                total_tasks += 1
+                print(f"   📖 Clicked read task {total_tasks}")
+                self.screenshot(f"task_{total_tasks}_clicked")
+                
+                print(f"   ⏳ Waiting 20 seconds for task {total_tasks} to complete...")
+                time.sleep(20)
+                self.screenshot(f"task_{total_tasks}_done")
+                
+                try:
+                    close_btns = self.driver.find_elements(By.XPATH, "//*[contains(@class, 'close')] | //*[text()='×']")
+                    for close_btn in close_btns:
+                        if close_btn.is_displayed() and close_btn.is_enabled():
+                            self.click_element(close_btn)
+                            time.sleep(0.3)
+                except:
+                    pass
+                
+                self.scroll_down(100)
+                time.sleep(0.3)
+                
+            except Exception as e:
+                print(f"   ⚠️ Task error: {e}")
+                self.screenshot(f"task_error")
+                self.scroll_down(200)
+                time.sleep(0.5)
+                continue
         
-        print(f"   ✅ Completed {total} tasks")
-        return total
+        print(f"   ✅ Completed {total_tasks} tasks")
+        self.screenshot("tasks_completed")
+        return total_tasks
+
+    # ============================================
+    # LOGIN
+    # ============================================
 
     def login(self, phone, password):
-        print(f"\n🔑 Logging in: {phone}")
+        print(f"\n🔑 Bot {self.bot_id} Logging in: {phone}")
         
         try:
+            # First, make sure we're on the login page
             self.driver.get("https://nnnrc.com/#/login")
             time.sleep(2)
             self.screenshot("01_login_page")
@@ -222,64 +360,134 @@ class NRCBot:
             print(f"   ✅ Password entered")
             self.screenshot("03_password_entered")
             
+            self.show_password()
+            self.screenshot("04_password_visible")
+            
             login_btn = self.find_login_button()
             if login_btn:
                 self.click_element(login_btn)
                 print(f"   ✅ Clicked login")
-                self.screenshot("04_after_login_click")
+                self.screenshot("05_after_login_click")
             else:
                 print(f"   ❌ Login button not found")
-                self.screenshot("04_login_button_not_found")
+                self.screenshot("05_login_button_not_found")
                 return False
             
-            time.sleep(5)
-            self.screenshot("05_after_login_wait")
+            print("   ⏳ Waiting 10 seconds for login to process...")
+            time.sleep(10)
+            self.screenshot("06_after_login_wait")
             
-            page = self.driver.page_source.lower()
-            if "important notice" in page or "cooperative wealth zone" in page:
-                print(f"   ✅ Login success!")
-                self.screenshot("06_login_success")
+            current_url = self.driver.current_url
+            page_source = self.driver.page_source.lower()
+            
+            print(f"   📍 Current URL: {current_url}")
+            
+            if "/logout" in current_url:
+                print(f"   ❌ Redirected to logout - login failed")
+                self.screenshot("07_login_failed_redirect")
+                return False
+            
+            success_indicators = [
+                "important notice",
+                "cooperative wealth zone",
+                "dashboard",
+                "welcome to join nrc",
+                "invite newcomers",
+                "wealth center",
+                "wish book",
+                "surprise code",
+                "deposit principal",
+                "welcome"
+            ]
+            
+            for indicator in success_indicators:
+                if indicator in page_source:
+                    print(f"   ✅✅✅ LOGIN SUCCESS! Found: '{indicator}'")
+                    self.screenshot("07_login_success")
+                    self.logged_in_accounts.append(phone)
+                    return True
+            
+            if "dashboard" in current_url or "home" in current_url or "user" in current_url:
+                print(f"   ✅✅✅ LOGIN SUCCESS! URL: {current_url}")
+                self.screenshot("07_login_success")
+                self.logged_in_accounts.append(phone)
                 return True
-            else:
-                print(f"   ❌ Login failed")
-                self.screenshot("06_login_failed")
+            
+            if "invalid" in page_source or "incorrect" in page_source or "error" in page_source:
+                print(f"   ❌ Invalid credentials")
+                self.screenshot("07_login_failed")
                 return False
+            
+            print(f"   ❌ Login failed - unknown reason")
+            self.screenshot("07_login_failed")
+            return False
+            
         except Exception as e:
             print(f"   ❌ Error: {e}")
-            self.screenshot("06_login_error")
+            self.screenshot("error")
             return False
 
-    def logout(self):
+    # ============================================
+    # PROCESS ACCOUNT
+    # ============================================
+
+    def process_account(self, phone, password):
+        """Login → Remove Important Notice → Do 6 tasks → Stay logged in"""
+        if not self.login(phone, password):
+            return False
+        
+        self.remove_important_notice()
+        self.screenshot("after_popup_removal")
+        
+        self.do_tasks()
+        self.screenshot("after_tasks")
+        
+        return True
+
+    def logout_all(self):
+        """Only logout at the very end"""
         try:
             self.driver.get("https://nnnrc.com/#/logout")
             time.sleep(2)
-            print("   ✅ Logged out")
-            self.screenshot("07_logged_out")
+            print(f"   ✅ Logged out all accounts")
+            self.screenshot("08_logged_out")
+            return True
         except:
-            pass
+            return False
+
+    # ============================================
+    # RUN
+    # ============================================
 
     def run(self):
         print("="*50)
-        print("🤖 BOT WITH TRACKING BLOCKED")
+        print(f"🤖 BOT {self.bot_id} STARTING")
         print("="*50)
 
         for login_data in self.logins:
             phone = login_data['phone']
             password = login_data['password']
-            print(f"\n📱 Account: {phone}")
+            print(f"\n📱 Bot {self.bot_id} Account: {phone}")
             
-            if self.login(phone, password):
-                self.remove_important_notice()
-                self.do_tasks()
-                self.logout()
+            if self.process_account(phone, password):
+                print(f"   ✅ SUCCESS for {phone}")
             else:
                 print(f"   ❌ FAILED for {phone}")
             
-            time.sleep(2)
+            # Wait between accounts but DON'T LOGOUT
+            time.sleep(3)
+
+        # Only logout once at the very end
+        if self.logged_in_accounts:
+            self.logout_all()
+        else:
+            print("   ⚠️ No accounts were processed successfully")
 
         self.driver.quit()
-        print(f"\n✅ Done!")
+        print(f"\n✅ Bot {self.bot_id} Done!")
+        print(f"📊 Successful accounts: {len(self.logged_in_accounts)}")
 
 if __name__ == "__main__":
-    bot = NRCBot()
+    bot_id = int(os.environ.get('BOT_ID', 1))
+    bot = NRCBot(bot_id=bot_id)
     bot.run()
